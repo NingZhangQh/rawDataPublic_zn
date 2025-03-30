@@ -1,0 +1,83 @@
+model restore "sample_sy100_0.01f"
+
+[sigy_confine = 100]
+[load = sigy_confine * 1000 * 2 * r_box]
+list @load ; print
+
+contact cmat default type ball-ball ...
+                   model linear method deform emod [emod] kratio [kratio]...
+                   property fric [fric] dp_nratio 0.2
+cmat list
+cmat apply
+
+; 1 confining (change max velocity if required)
+wall servo force 0 [-load] activate on velocity-max 0.5e-1 range id 3
+wall servo force 0 [load] activate on velocity-max 0.5e-1 range id 6 
+
+cycle 1
+;model solve
+;model mec timestep scale
+model mec timestep auto safety-factor 0.95
+model deterministic off
+model solve 
+
+; 2 set functions 
+; gorup
+fish def setgroup(nx, ny)
+    local dx = (r_box * 2.0) / nx
+    local dy = h_box / ny
+    local count = 0
+    local x0 = -r_box
+    local y0 = -h_box / 2
+    loop i(1, nx)
+        if ny == 1
+            y0 -= dy
+            dy += dy 
+        endif
+        loop j(1, ny)
+            count = count + 1
+            local tag = string((count % 2) + 1); 1 or 2
+            command
+                ball group [tag] range pos-x [x0+(i-1)*dx] [x0+i*dx] pos-y [y0+(j-1)*dy] [y0+j*dy] 
+            endcommand
+        endloop
+    endloop
+end
+@setgroup(16,1)
+
+;set monitor
+fish def monitor
+    whilestepping
+    dis = wall.disp.x(wall.find(1))
+    force = 0.0
+    loop n(1,3)
+        force -= wall.force.contact.x(wall.find(n))
+    endloop
+    tau = force / (2 * r_box)
+    V_current = (h_box + dis) * r_box * 2
+end
+
+;set solve
+def solveAndSave(time, nSave)
+    step0 = global.step
+    loop ii(1, nSave)
+        command            
+            model solve time [time/nSave]
+            model save ["solve_sy100_0.01f" + string(sigy) + "_" + string(ii)]
+        endcommand
+    endloop
+end
+
+; 4 finishied. change fric (important)
+;contact cmat default type ball-ball ...
+;                   model linear method deform emod [emod] kratio [kratio]...
+;                   property fric [fric] dp_nratio 0.2
+;cmat list
+;cmat apply
+
+@mesure_porosity_overall()
+[n_confine = n_current]
+[sigy_confine = 100]
+
+
+model save ["confine_" + '0.01f'+'_' + string(sigy_confine)]
