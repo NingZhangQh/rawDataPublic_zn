@@ -1,10 +1,10 @@
 function v = Con3_regularPoly_cor(nf)
-% new (make tet with correct order)
+
 if nf == 4
-    v =  [1,1,1
-        -1,-1,1
-        1,-1,-1
-         -1,1,-1]/sqrt(8);
+    v =  [1, 1, 1;
+          1, -1, -1;
+        -1, -1, 1;
+        -1, 1, -1]/sqrt(8);
 elseif nf == 6
     v = [1, 1, 1;
         1, 1, -1;
